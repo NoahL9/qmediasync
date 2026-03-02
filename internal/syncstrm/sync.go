@@ -177,6 +177,10 @@ func NewSyncStrmFromSyncPath(syncPath *models.SyncPath) *SyncStrm {
 		CheckMetaMtime:        syncPath.GetCheckMetaMtime(),
 		StrmBaseUrl:           syncPath.GetStrmBaseUrl(),
 	}
+	if account.SourceType == models.SourceTypeOpenList {
+		// openlist只使用自定义的strm直连地址
+		config.StrmBaseUrl = syncPath.SettingStrm.StrmBaseUrl
+	}
 	return NewSyncStrm(account, syncPath.ID, syncPath.RemotePath, syncPath.BaseCid, syncPath.LocalPath, config, syncPath.IsFullSync, syncPath.LastSyncAt, false)
 }
 

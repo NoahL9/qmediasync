@@ -163,6 +163,7 @@ func (i *IdTvShowImpl) extractInfoByAI(mediaFile *models.ScrapeMediaFile) (*help
 }
 
 // 正则提取
+// 从文件名中获取名字+年份
 func (i *IdTvShowImpl) extractInfoByRE(mediaFile *models.ScrapeMediaFile) (*helpers.MediaInfo, error) {
 	folderName := filepath.Base(mediaFile.TvshowPath)
 	filename := filepath.Base(mediaFile.VideoFilename)
@@ -239,3 +240,8 @@ func (i *IdTvShowImpl) extractInfoByRE(mediaFile *models.ScrapeMediaFile) (*help
 	}
 	return nil, fmt.Errorf("文件名 %s, 无法提取到任何媒体信息", filename)
 }
+
+// // 先从文件名中提取名称 + 年份
+// func (i *IdTvShowImpl) extractInfoByREV2(mediaFile *models.ScrapeMediaFile) (*helpers.MediaInfo, error) {
+
+// }
