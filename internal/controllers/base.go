@@ -212,7 +212,13 @@ func RepairDB(c *gin.Context) {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "修复数据库失败: " + err.Error(), Data: nil})
 		return
 	}
-	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "修复数据库成功", Data: nil})
+	// 修复数据库表的主键序列
+	err = models.BatchRepairTableSeq()
+	if err != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "修复数据库表的主键序列失败: " + err.Error(), Data: nil})
+		return
+	}
+	c.JSON(http.StatusOK, APIResponse[any]{Code: Success, Message: "已重建全部数据表并修复所有表的主键序列成功", Data: nil})
 }
 
 func GetAnnounce(c *gin.Context) {

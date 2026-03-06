@@ -161,6 +161,8 @@ func NewSyncStrmFromSyncPath(syncPath *models.SyncPath) *SyncStrm {
 	} else {
 		account = &models.Account{SourceType: models.SourceTypeLocal}
 	}
+	// 重新load一下设置
+	models.LoadSettings()
 	if (account.SourceType == models.SourceType115 || account.SourceType == models.SourceTypeBaiduPan) && syncPath.GetStrmBaseUrl() == "" {
 		helpers.AppLogger.Errorf("115或百度网盘同步路径 %s 未配置STRM直连地址", syncPath.RemotePath)
 		return nil

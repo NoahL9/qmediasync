@@ -18,6 +18,16 @@ type Migrator struct {
 }
 
 var MaxVersionCode = 32
+var AllTables = []interface{}{
+	BackupConfig{}, BackupRecord{},
+	ApiKey{}, Settings{}, Sync{}, User{}, Account{},
+	SyncPath{}, SyncFile{}, SyncPathScrapePath{},
+	ScrapeSettings{}, ScrapePath{}, MovieCategory{}, TvShowCategory{}, ScrapePathCategory{},
+	ScrapeMediaFile{}, Media{}, MediaSeason{}, MediaEpisode{}, ScrapeStrmPath{},
+	RequestStat{}, EmbyConfig{}, EmbyMediaItem{}, EmbyMediaSyncFile{}, EmbyLibrary{}, EmbyLibrarySyncPath{},
+	DbDownloadTask{}, DbUploadTask{}, NotificationChannel{}, TelegramChannelConfig{}, MeoWChannelConfig{}, BarkChannelConfig{},
+	ServerChanChannelConfig{}, CustomWebhookChannelConfig{}, NotificationRule{},
+}
 
 func (*Migrator) TableName() string {
 	return "migrator"
@@ -369,59 +379,17 @@ func Migrate() {
 	helpers.AppLogger.Infof("当前数据库版本 %d", migrator.VersionCode)
 }
 
+// 重建不存在的表，然后修复主键
 func BatchCreateTable() error {
 	db.Db.Statement.PrepareStmt = true
 
 	var err error
 	var lastErr error
-	// 数据库版本表
-	err = db.Db.AutoMigrate(Migrator{})
-	if err != nil {
-		lastErr = err
-	}
-	// 配置、用户、同步目录表 BackupConfig{}, BackupRecord{}, ApiKey{}, Settings{}, Sync{}, User{}, SyncPath{}, Account{}, SyncFile{}, SyncPathScrapePath{}, ScrapeSettings{}, ScrapePath{}, MovieCategory{}, TvShowCategory{}, ScrapePathCategory{}, ScrapeMediaFile{}, Media{}, MediaSeason{}, MediaEpisode{}, ScrapeStrmPath{}, RequestStat{}, EmbyConfig{}, EmbyMediaItem{}, EmbyMediaSyncFile{}, EmbyLibrary{}, EmbyLibrarySyncPath{}, DbDownloadTask{}, DbUploadTask{}, NotificationChannel{}, TelegramChannelConfig{}, MeoWChannelConfig{}, BarkChannelConfig{}, ServerChanChannelConfig{}, CustomWebhookChannelConfig{}, NotificationRule{},
-	err = db.Db.AutoMigrate(Settings{}, Sync{}, User{}, SyncPath{}, Account{})
-	if err != nil {
-		lastErr = err
-	}
-	err = db.Db.AutoMigrate(SyncFile{}, SyncPathScrapePath{})
-	if err != nil {
-		lastErr = err
-	}
-	// 刮削相关表
-	err = db.Db.AutoMigrate(ScrapeSettings{}, ScrapePath{}, MovieCategory{}, TvShowCategory{}, ScrapePathCategory{}, ScrapeMediaFile{}, Media{}, MediaSeason{}, MediaEpisode{}, ScrapeStrmPath{})
-	if err != nil {
-		lastErr = err
-	}
-	// 115请求统计表
-	err = db.Db.AutoMigrate(&RequestStat{})
-	if err != nil {
-		lastErr = err
-	}
-	// Emby 同步相关表
-	err = db.Db.AutoMigrate(EmbyConfig{}, EmbyMediaItem{}, EmbyMediaSyncFile{}, EmbyLibrary{}, EmbyLibrarySyncPath{})
-	if err != nil {
-		lastErr = err
-	}
-	// 下载队列
-	err = db.Db.AutoMigrate(DbDownloadTask{}, DbUploadTask{})
-	if err != nil {
-		lastErr = err
-	}
-	// 通知渠道表
-	err = db.Db.AutoMigrate(NotificationChannel{}, TelegramChannelConfig{}, MeoWChannelConfig{}, BarkChannelConfig{}, ServerChanChannelConfig{}, CustomWebhookChannelConfig{}, NotificationRule{})
-	if err != nil {
-		lastErr = err
-	}
-	// API Key认证表
-	err = db.Db.AutoMigrate(ApiKey{})
-	if err != nil {
-		lastErr = err
-	}
-	// 备份恢复相关表
-	err = db.Db.AutoMigrate(BackupConfig{}, BackupRecord{})
-	if err != nil {
-		lastErr = err
+	for _, table := range AllTables {
+		err = db.Db.AutoMigrate(table)
+		if err != nil {
+			lastErr = err
+		}
 	}
 	return lastErr
 }
@@ -789,11 +757,52 @@ func fillSyncPathIdInEmbyMediaSyncFile(dbConn *gorm.DB) {
 }
 
 func BatchDropTable() error {
+	var err, lastErr error
 	// 删除所有表
-	err := db.Db.Migrator().DropTable(BackupConfig{}, BackupRecord{}, ApiKey{}, Settings{}, Sync{}, User{}, SyncPath{}, Account{}, SyncFile{}, SyncPathScrapePath{}, ScrapeSettings{}, ScrapePath{}, MovieCategory{}, TvShowCategory{}, ScrapePathCategory{}, ScrapeMediaFile{}, Media{}, MediaSeason{}, MediaEpisode{}, ScrapeStrmPath{}, RequestStat{}, EmbyConfig{}, EmbyMediaItem{}, EmbyMediaSyncFile{}, EmbyLibrary{}, EmbyLibrarySyncPath{}, DbDownloadTask{}, DbUploadTask{}, NotificationChannel{}, TelegramChannelConfig{}, MeoWChannelConfig{}, BarkChannelConfig{}, ServerChanChannelConfig{}, CustomWebhookChannelConfig{}, NotificationRule{})
-	if err != nil {
-		helpers.AppLogger.Errorf("删除表失败：%v", err)
-		return err
+	for _, table := range AllTables {
+		err = db.Db.Migrator().DropTable(table)
+		if err != nil {
+			lastErr = err
+			helpers.AppLogger.Errorf("删除表失败：%v", err)
+		}
+	}
+	if lastErr != nil {
+		return lastErr
 	}
 	return nil
+}
+
+// 批量更新表的主键序列
+// 只处理postgres的修复
+func BatchRepairTableSeq() error {
+	if helpers.GlobalConfig.Db.Engine != "postgres" {
+		return nil
+	}
+	var err, lastErr error
+	// 修复所有表
+	for _, table := range AllTables {
+		tableName := GetTableName(table)
+		err = ResetSequence(tableName, "id")
+		if err != nil {
+			lastErr = err
+			helpers.AppLogger.Errorf("修复表 %s 的主键序列失败：%v", tableName, err)
+		}
+	}
+	if lastErr != nil {
+		return lastErr
+	}
+	return nil
+}
+
+func ResetSequence(tableName string, columnName string) error {
+	var maxId int64
+	// 获取当前最大ID，如果表为空则从1开始
+	db.Db.Table(tableName).Select(fmt.Sprintf("COALESCE(MAX(%s), 0)", columnName)).Scan(&maxId)
+	if maxId == 0 {
+		// 如果没有值则不修复
+		return nil
+	}
+	// 重置序列
+	sequenceName := fmt.Sprintf("%s_%s_seq", tableName, columnName)
+	return db.Db.Exec(fmt.Sprintf("SELECT setval('%s', ?)", sequenceName), maxId).Error
 }

@@ -111,7 +111,7 @@ func startAllTasks() error {
 
 // 遍历每一个模型，生成json格式的备份文件
 func Backup(backupType string, reason string) error {
-	totalTable := 35
+	totalTable := len(models.AllTables)
 	count := 0
 	// config := models.GetOrCreateBackupConfig()
 	backupDir := filepath.Join(helpers.ConfigDir, "backups")
@@ -160,119 +160,10 @@ func Backup(backupType string, reason string) error {
 			os.RemoveAll(backupRecordDir)
 		}
 	}()
-	if err := backupToJsonFile(backupRecordDir, "Account", totalTable, &count, models.Account{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "Migrator", totalTable, &count, models.Migrator{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "ApiKey", totalTable, &count, models.ApiKey{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "DbDownloadTask", totalTable, &count, models.DbDownloadTask{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "DbUploadTask", totalTable, &count, models.DbUploadTask{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "Settings", totalTable, &count, models.Settings{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "User", totalTable, &count, models.User{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "Sync", totalTable, &count, models.Sync{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "SyncPath", totalTable, &count, models.SyncPath{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "ScrapeSettings", totalTable, &count, models.ScrapeSettings{}); err != nil {
-		return err
-	}
-
-	if err := backupToJsonFile(backupRecordDir, "ScrapePath", totalTable, &count, models.ScrapePath{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "ScrapePathCategory", totalTable, &count, models.ScrapePathCategory{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "MovieCategory", totalTable, &count, models.MovieCategory{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "TvShowCategory", totalTable, &count, models.TvShowCategory{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "ScrapeStrmPath", totalTable, &count, models.ScrapeStrmPath{}); err != nil {
-		return err
-	}
-
-	if err := backupToJsonFile(backupRecordDir, "EmbyConfig", totalTable, &count, models.EmbyConfig{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "EmbyLibrary", totalTable, &count, models.EmbyLibrary{}); err != nil {
-		return err
-	}
-	// if err := backupToJsonFile(backupRecordDir, "EmbyMediaItem", totalTable, &count, models.EmbyMediaItem{}); err != nil {
-	// 	return err
-	// }
-
-	if err := backupToJsonFile(backupRecordDir, "EmbyLibrarySyncPath", totalTable, &count, models.EmbyLibrarySyncPath{}); err != nil {
-		return err
-	}
-
-	if err := backupToJsonFile(backupRecordDir, "RequestStat", totalTable, &count, models.RequestStat{}); err != nil {
-		return err
-	}
-
-	if err := backupToJsonFile(backupRecordDir, "BackupConfig", totalTable, &count, models.BackupConfig{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "BackupRecord", totalTable, &count, models.BackupRecord{}); err != nil {
-		return err
-	}
-
-	if err := backupToJsonFile(backupRecordDir, "BarkChannelConfig", totalTable, &count, models.BarkChannelConfig{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "CustomWebhookChannelConfig", totalTable, &count, models.CustomWebhookChannelConfig{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "MeowChannelConfig", totalTable, &count, models.MeoWChannelConfig{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "TelegramChannelConfig", totalTable, &count, models.TelegramChannelConfig{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "NotificationChannel", totalTable, &count, models.NotificationChannel{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "ServerChanChannelConfig", totalTable, &count, models.ServerChanChannelConfig{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "NotificationRule", totalTable, &count, models.NotificationRule{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "SyncPathScrapePath", totalTable, &count, models.SyncPathScrapePath{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "ScrapeMediaFile", totalTable, &count, models.ScrapeMediaFile{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "Media", totalTable, &count, models.Media{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "MediaSeason", totalTable, &count, models.MediaSeason{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "MediaEpisode", totalTable, &count, models.MediaEpisode{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "SyncFile", totalTable, &count, models.SyncFile{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "EmbyMediaSyncFile", totalTable, &count, models.EmbyMediaSyncFile{}); err != nil {
-		return err
+	for _, table := range models.AllTables {
+		if err := backupToJsonFile(backupRecordDir, helpers.GetStructName(table), totalTable, &count, table); err != nil {
+			return err
+		}
 	}
 
 	record.Status = models.BackupStatusCompleted

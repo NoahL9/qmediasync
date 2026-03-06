@@ -282,6 +282,22 @@ func InitCron() {
 			helpers.AppLogger.Infof("已清理24小时前的请求统计数据")
 		}
 	})
+	GlobalCron.AddFunc("0 4 * * *", func() {
+		// 每天4点修复数据库表的主键序列
+		// 修复数据库，重建所有表
+		err := models.BatchCreateTable()
+		if err != nil {
+			helpers.AppLogger.Errorf("修复数据库失败: %v", err)
+			return
+		} else {
+			helpers.AppLogger.Infof("已重建全部数据表（不影响已存在的表和数据）")
+		}
+		if err := models.BatchRepairTableSeq(); err != nil {
+			helpers.AppLogger.Errorf("修复数据库表的主键序列失败: %v", err)
+		} else {
+			helpers.AppLogger.Infof("已修复所有表的主键序列")
+		}
+	})
 
 	addBackupCron()
 
