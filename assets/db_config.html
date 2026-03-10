@@ -277,6 +277,12 @@
                 <label for="database">数据库名</label>
                 <input type="text" id="database" value="qmediasync" oninput="onInputChanged()">
             </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <span style="width:50%;">启用 SSL 连接</span>
+                    <input type="checkbox" id="ssl" onchange="onInputChanged()">
+                </label>
+            </div>
             <div class="btn-group">
                 <button id="btn-test" class="btn btn-secondary" onclick="testConnection()">测试连接</button>
                 <button id="btn-save" class="btn" onclick="saveConfig()" disabled style="opacity: 0.5; cursor: not-allowed;">保存配置</button>
@@ -360,6 +366,7 @@
             const user = document.getElementById('user').value;
             const password = document.getElementById('password').value;
             const database = document.getElementById('database').value;
+            const ssl = document.getElementById('ssl').checked;
 
             if (!host || !user || !password || !database) {
                 showMessage('error', '请填写所有必填字段');
@@ -380,7 +387,8 @@
                     port: port,
                     user: user,
                     password: password,
-                    database: database
+                    database: database,
+                    ssl: ssl
                 })
             })
             .then(response => response.json())
@@ -448,6 +456,7 @@
                 data.user = document.getElementById('user').value;
                 data.password = document.getElementById('password').value;
                 data.database = document.getElementById('database').value;
+                data.ssl = document.getElementById('ssl').checked;
 
                 if (!data.host || !data.user || !data.password || !data.database) {
                     showMessage('error', '请填写所有必填字段');

@@ -1077,14 +1077,19 @@ func StartConfigWebServer() {
 			User     string `json:"user"`
 			Password string `json:"password"`
 			Database string `json:"database"`
+			SSL      bool   `json:"ssl"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(400, gin.H{"success": false, "error": err.Error()})
 			return
 		}
 
-		connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=disable",
-			req.Host, req.Port, req.User, req.Password)
+		sslMode := "disable"
+		if req.SSL {
+			sslMode = "require"
+		}
+		connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
+			req.Host, req.Port, req.User, req.Password, sslMode)
 		sqlDB, err := sql.Open("postgres", connStr)
 		if err != nil {
 			c.JSON(200, gin.H{"success": false, "error": "连接失败: " + err.Error()})
@@ -1112,8 +1117,8 @@ func StartConfigWebServer() {
 			return
 		}
 
-		connStrDb := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-			req.Host, req.Port, req.User, req.Password, req.Database)
+		connStrDb := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+			req.Host, req.Port, req.User, req.Password, req.Database, sslMode)
 		sqlDBDb, err := sql.Open("postgres", connStrDb)
 		if err != nil {
 			c.JSON(200, gin.H{"success": true, "message": "数据库连接成功", "dbExists": true, "hasOtherTables": false})
@@ -1140,6 +1145,7 @@ func StartConfigWebServer() {
 			User          string `json:"user"`
 			Password      string `json:"password"`
 			Database      string `json:"database"`
+			SSL           bool   `json:"ssl"`
 			AdminUsername string `json:"adminUsername"`
 			AdminPassword string `json:"adminPassword"`
 			DropDatabase  bool   `json:"dropDatabase"`
@@ -1155,8 +1161,12 @@ func StartConfigWebServer() {
 			yamlConfig.Db.PostgresType = helpers.PostgresType(req.PostgresType)
 			if req.PostgresType == string(helpers.PostgresTypeExternal) {
 				if req.DropDatabase {
-					connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=disable",
-						req.Host, req.Port, req.User, req.Password)
+					sslMode := "disable"
+					if req.SSL {
+						sslMode = "require"
+					}
+					connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
+						req.Host, req.Port, req.User, req.Password, sslMode)
 					sqlDB, err := sql.Open("postgres", connStr)
 					if err == nil {
 						ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -1171,6 +1181,7 @@ func StartConfigWebServer() {
 					User:         req.User,
 					Password:     req.Password,
 					Database:     req.Database,
+					SSL:          req.SSL,
 					MaxOpenConns: 25,
 					MaxIdleConns: 25,
 				}
