@@ -94,8 +94,8 @@ type ScrapePath struct {
 	EnableCron            bool                         `json:"enable_cron" form:"enable_cron"`                           // 是否启用定时任务，开启时会根据定时任务规则定时刮削
 	CronExpression        string                       `json:"cron_expression" form:"cron_expression"`                   // Cron 表达式（如：0 3 * * *）
 	CronDescription       string                       `json:"cron_description" form:"cron_description"`                 // Cron 表达式描述（如：每天 3 点）
-	LastCronRun           string                       `json:"last_cron_run" form:"last_cron_run"`                        // 上次执行时间
-	NextCronRun           string                       `json:"next_cron_run" form:"next_cron_run"`                        // 下次执行时间
+	LastCronRun           string                       `json:"last_cron_run" form:"last_cron_run"`                       // 上次执行时间
+	NextCronRun           string                       `json:"next_cron_run" form:"next_cron_run"`                       // 下次执行时间
 	CronEnabled           int                          `json:"cron_enabled" form:"cron_enabled"`                         // 定时任务启用状态（0/1）
 	EnableFanartTv        bool                         `json:"enable_fanart_tv" form:"enable_fanart_tv"`                 // 是否启用 fanart.tv，开启时会从 fanart.tv 下载高清图
 	IsScraping            bool                         `json:"is_scraping" form:"is_scraping"`                           // 是否正在刮削
@@ -818,10 +818,10 @@ func (sp *ScrapePath) UpdateCronExpression(cronExpr string) error {
 
 	// 更新数据库
 	return db.Db.Model(&ScrapePath{}).Where("id = ?", sp.ID).Updates(map[string]interface{}{
-		"cron_expression":   cronExpr,
-		"cron_description":  description,
-		"next_cron_run":     nextRun.Format("2006-01-02 15:04:05"),
-		"cron_enabled":      1,
+		"cron_expression":  cronExpr,
+		"cron_description": description,
+		"next_cron_run":    nextRun.Format("2006-01-02 15:04:05"),
+		"cron_enabled":     1,
 	}).Error
 }
 
