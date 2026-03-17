@@ -631,7 +631,7 @@ func CleanOldRequestStats(c *gin.Context) {
 // ua参数：必须使用当前请求的USER-AGENT访问115链接（否则返回403）
 func checkURLValidity(urlStr string, ua string) bool {
 	client := &http.Client{
-		Timeout: 3 * time.Second, // 3秒超时
+		Timeout: 100 * time.Millisecond, // 100毫秒超时
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// 不跟随重定向，只检查第一次响应
 			return http.ErrUseLastResponse
