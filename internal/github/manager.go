@@ -16,6 +16,7 @@ const (
 	ConnectionTypeDirect      ConnectionType = "direct"       // 直连
 	ConnectionTypeProxy       ConnectionType = "proxy"        // 用户代理
 	ConnectionTypeGitHubProxy ConnectionType = "github_proxy" // GitHub代理URL
+	ConnectionTypeFailed      ConnectionType = "failed"       // 连接失败
 )
 
 // GitHubAccess GitHub访问配置

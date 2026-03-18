@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"Q115-STRM/internal/db"
+	"Q115-STRM/internal/github"
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
 	"Q115-STRM/internal/updater"
@@ -111,12 +112,12 @@ func UpdateToVersion(c *gin.Context) {
 	}
 	// 测试downloadUrl是否可以连通
 	// 先测试链接是否可用
-	proxyUrl := helpers.TestGithub(downloadURL, models.SettingsGlobal.HttpProxy)
-	if proxyUrl == "failed" && models.SettingsGlobal.HttpProxy == "" {
+	connType, proxyUrl := helpers.TestGithub(downloadURL, models.SettingsGlobal.HttpProxy)
+	if connType == github.ConnectionTypeFailed {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "无法连通github，也没有设置代理，无法升级", Data: nil})
 		return
 	}
-	if proxyUrl != "failed" {
+	if connType == github.ConnectionTypeGitHubProxy {
 		downloadURL = proxyUrl
 	}
 	currentUpdateInfo = &updateInfo{
@@ -145,7 +146,7 @@ func UpdateToVersion(c *gin.Context) {
 			os.Remove(updateFilename)
 		}
 		httpProxy := ""
-		if proxyUrl == "failed" {
+		if connType == github.ConnectionTypeProxy {
 			httpProxy = models.SettingsGlobal.HttpProxy
 		}
 		// 下载文件

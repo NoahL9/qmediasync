@@ -484,30 +484,30 @@ func DownloadFileWithProgressWithoutContext(proxyUrl, downloadUrl string, fileNa
 // 返回值：
 //   - 如果连接成功，返回实际使用的URL（可能是原始URL或代理URL）
 //   - 如果连接失败，返回"failed"
-func TestGithub(url string, proxy string) string {
+func TestGithub(url string, proxy string) (github.ConnectionType, string) {
 	manager := github.GetManager()
 
 	// 获取最佳连接方式
 	access, err := manager.GetBestConnection()
 	if err != nil {
 		AppLogger.Warnf("[GitHub] 无法获取最佳连接: %v", err)
-		return "failed"
+		return github.ConnectionTypeFailed, "failed"
 	}
 
 	// 根据连接类型返回对应的URL
 	switch access.Type {
 	case github.ConnectionTypeDirect:
 		// 直连，直接返回原URL
-		return url
+		return access.Type, url
 	case github.ConnectionTypeProxy:
 		// 用户代理，返回代理URL
-		return url
+		return access.Type, url
 	case github.ConnectionTypeGitHubProxy:
 		// GitHub代理URL，使用硬编码的代理前缀
 		proxyUrl := fmt.Sprintf("%s%s", "https://gh.llkk.cc/", url)
-		return proxyUrl
+		return access.Type, proxyUrl
 	default:
 		AppLogger.Warnf("[GitHub] 未知的连接类型: %s", access.Type)
-		return "failed"
+		return access.Type, "failed"
 	}
 }
