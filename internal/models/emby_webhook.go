@@ -7,15 +7,47 @@ import (
 
 // EmbyPlaybackWebhook Emby 播放事件 Webhook 消息结构
 type EmbyPlaybackWebhook struct {
-	Event      string        `json:"Event"`      // Playback.Start/Playback.Pause/Playback.Stop
-	Item       EmbyPlaybackItem `json:"Item"`
-	UserID     string        `json:"UserId"`
-	UserName   string        `json:"UserName"`
-	ServerID   string        `json:"ServerId"`
-	DeviceName string        `json:"DeviceName"`
-	ClientName string        `json:"ClientName"`
-	DeviceID   string        `json:"DeviceId"`
-	PlaybackDuration int64  `json:"PlaybackDuration,omitempty"` // 播放时长（毫秒，仅 Stop 事件有）
+	Event string `json:"Event"` // playback.start/playback.pause/playback.stop
+	User  EmbyPlaybackUser
+	Item  EmbyPlaybackItem
+	Session EmbyPlaybackSession
+	Server  EmbyPlaybackServer
+}
+
+// EmbyPlaybackUser 播放用户信息
+type EmbyPlaybackUser struct {
+	Name string `json:"Name"`
+	ID   string `json:"Id"`
+}
+
+// EmbyPlaybackSession 播放会话信息
+type EmbyPlaybackSession struct {
+	RemoteEndPoint      string            `json:"RemoteEndPoint"`
+	Client              string            `json:"Client"`
+	DeviceName          string            `json:"DeviceName"`
+	DeviceID            string            `json:"DeviceId"`
+	ApplicationVersion  string            `json:"ApplicationVersion"`
+	ID                  string            `json:"Id"`
+	PlaybackInfo        EmbyPlaybackInfo  `json:"PlaybackInfo"`
+}
+
+// EmbyPlaybackInfo 播放信息
+type EmbyPlaybackInfo struct {
+	PositionTicks   int64              `json:"PositionTicks"`     // 当前播放位置（单位：1/10000微秒）
+	PlaySessionId   string             `json:"PlaySessionId"`    // 播放会话ID
+	MediaSource     EmbyMediaSource    `json:"MediaSource"`
+}
+
+// EmbyMediaSource 媒体源信息
+type EmbyMediaSource struct {
+	RunTimeTicks int64 `json:"RunTimeTicks"` // 总时长（单位：1/10000微秒）
+}
+
+// EmbyPlaybackServer Emby服务器信息
+type EmbyPlaybackServer struct {
+	Name    string `json:"Name"`
+	ID      string `json:"Id"`
+	Version string `json:"Version"`
 }
 
 // EmbyPlaybackItem Emby 播放媒体项信息
@@ -28,6 +60,13 @@ type EmbyPlaybackItem struct {
 	SeriesName     string `json:"SeriesName,omitempty"`     // 剧集名称
 	SeasonNumber   int    `json:"SeasonNumber,omitempty"`   // 季号（剧集）
 	EpisodeNumber  int    `json:"EpisodeNumber,omitempty"`  // 集号（剧集）
+	Overview       string `json:"Overview,omitempty"`       // 媒体简介
+	Genres         []string `json:"Genres,omitempty"`        // 流派
+	Studios        []struct {
+		Name string `json:"Name"`
+		ID   string `json:"Id"`
+	} `json:"Studios,omitempty"` // 制作公司
+	ImageTags      map[string]string `json:"ImageTags,omitempty"` // 图片标签
 }
 
 // GetSeasonEpisodeString 获取季集信息字符串（如 "S01E06"）
@@ -70,11 +109,11 @@ func FormatPlaybackDuration(durationMs int64) string {
 // GetNotificationEventType 根据 Emby 事件类型获取通知类型
 func (w *EmbyPlaybackWebhook) GetNotificationEventType() string {
 	switch w.Event {
-	case "Playback.Start":
+	case "playback.start":
 		return "playback_start"
-	case "Playback.Pause":
+	case "playback.pause":
 		return "playback_pause"
-	case "Playback.Stop":
+	case "playback.stop":
 		return "playback_stop"
 	default:
 		return ""
@@ -84,11 +123,11 @@ func (w *EmbyPlaybackWebhook) GetNotificationEventType() string {
 // GetEventTypeEmoji 获取事件类型对应的表情符号
 func (w *EmbyPlaybackWebhook) GetEventTypeEmoji() string {
 	switch w.Event {
-	case "Playback.Start":
+	case "playback.start":
 		return "📺"
-	case "Playback.Pause":
+	case "playback.pause":
 		return "⏸️"
-	case "Playback.Stop":
+	case "playback.stop":
 		return "⏹️"
 	default:
 		return "📺"
@@ -98,11 +137,11 @@ func (w *EmbyPlaybackWebhook) GetEventTypeEmoji() string {
 // GetEventTypeName 获取事件类型中文名称
 func (w *EmbyPlaybackWebhook) GetEventTypeName() string {
 	switch w.Event {
-	case "Playback.Start":
+	case "playback.start":
 		return "播放开始"
-	case "Playback.Pause":
+	case "playback.pause":
 		return "播放暂停"
-	case "Playback.Stop":
+	case "playback.stop":
 		return "播放停止"
 	default:
 		return "播放事件"
@@ -119,4 +158,45 @@ func (w *EmbyPlaybackWebhook) GetMediaTypeName() string {
 	default:
 		return "媒体"
 	}
+}
+
+// GetPlaybackDuration 获取播放时长（毫秒，仅Stop事件有意义）
+// 对于Stop事件，返回已播放的时长；对于其他事件，返回0
+func (w *EmbyPlaybackWebhook) GetPlaybackDuration() int64 {
+	if w.Event != "playback.stop" {
+		return 0
+	}
+	// PositionTicks单位是1/10000微秒，转换为毫秒
+	// 1 tick = 0.1毫秒
+	return w.Session.PlaybackInfo.PositionTicks / 10
+}
+
+// GetUserID 获取用户ID
+func (w *EmbyPlaybackWebhook) GetUserID() string {
+	return w.User.ID
+}
+
+// GetUserName 获取用户名
+func (w *EmbyPlaybackWebhook) GetUserName() string {
+	return w.User.Name
+}
+
+// GetDeviceName 获取设备名称
+func (w *EmbyPlaybackWebhook) GetDeviceName() string {
+	return w.Session.DeviceName
+}
+
+// GetClientName 获取客户端名称
+func (w *EmbyPlaybackWebhook) GetClientName() string {
+	return w.Session.Client
+}
+
+// GetDeviceID 获取设备ID
+func (w *EmbyPlaybackWebhook) GetDeviceID() string {
+	return w.Session.DeviceID
+}
+
+// GetServerID 获取服务器ID
+func (w *EmbyPlaybackWebhook) GetServerID() string {
+	return w.Server.ID
 }

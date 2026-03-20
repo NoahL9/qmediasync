@@ -644,10 +644,10 @@ func handlePlaybackEvent(body []byte, event EmbyEvent) {
 
 	// 检查去重（1分钟内不重复通知）
 	cacheKey := fmt.Sprintf("%s_%s_%s_%s_%s",
-		playbackWebhook.UserID,
+		playbackWebhook.GetUserID(),
 		playbackWebhook.Item.Type,
 		playbackWebhook.Item.Name,
-		playbackWebhook.DeviceName,
+		playbackWebhook.GetDeviceName(),
 		playbackWebhook.Event,
 	)
 
@@ -686,12 +686,12 @@ func createPlaybackNotification(webhook *models.EmbyPlaybackWebhook) *notificati
 
 	// 构造通知元数据
 	metadata := map[string]interface{}{
-		"user_id":     webhook.UserID,
-		"user_name":   webhook.UserName,
+		"user_id":     webhook.GetUserID(),
+		"user_name":   webhook.GetUserName(),
 		"media_type":  webhook.Item.Type,
 		"media_title": webhook.Item.Name,
-		"device_name": webhook.DeviceName,
-		"client_name": webhook.ClientName,
+		"device_name": webhook.GetDeviceName(),
+		"client_name": webhook.GetClientName(),
 	}
 
 	if webhook.Item.Type == "Episode" {
@@ -700,9 +700,10 @@ func createPlaybackNotification(webhook *models.EmbyPlaybackWebhook) *notificati
 		metadata["episode_number"] = webhook.Item.EpisodeNumber
 	}
 
-	if webhook.PlaybackDuration > 0 {
-		metadata["playback_duration"] = webhook.PlaybackDuration
-		metadata["playback_duration_formatted"] = models.FormatPlaybackDuration(webhook.PlaybackDuration)
+	playbackDuration := webhook.GetPlaybackDuration()
+	if playbackDuration > 0 {
+		metadata["playback_duration"] = playbackDuration
+		metadata["playback_duration_formatted"] = models.FormatPlaybackDuration(playbackDuration)
 	}
 
 	return &notification.Notification{
@@ -725,7 +726,7 @@ func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) stri
 		mediaTitle = fmt.Sprintf("%s (%d)", webhook.Item.Name, webhook.Item.ProductionYear)
 	}
 
-	buf.WriteString(fmt.Sprintf("用户：%s\n", webhook.UserName))
+	buf.WriteString(fmt.Sprintf("用户：%s\n", webhook.GetUserName()))
 	buf.WriteString(fmt.Sprintf("内容：%s - %s\n", webhook.GetMediaTypeName(), mediaTitle))
 
 	// 如果是剧集，添加季集信息
@@ -749,11 +750,12 @@ func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) stri
 	}
 
 	// 添加设备信息
-	buf.WriteString(fmt.Sprintf("设备：%s (%s)\n", webhook.DeviceName, webhook.ClientName))
+	buf.WriteString(fmt.Sprintf("设备：%s (%s)\n", webhook.GetDeviceName(), webhook.GetClientName()))
 
 	// 如果是停止事件，添加播放时长
-	if webhook.Event == "Playback.Stop" && webhook.PlaybackDuration > 0 {
-		buf.WriteString(fmt.Sprintf("时长：%s", models.FormatPlaybackDuration(webhook.PlaybackDuration)))
+	playbackDuration := webhook.GetPlaybackDuration()
+	if webhook.Event == "playback.stop" && playbackDuration > 0 {
+		buf.WriteString(fmt.Sprintf("时长：%s", models.FormatPlaybackDuration(playbackDuration)))
 	}
 
 	return buf.String()
