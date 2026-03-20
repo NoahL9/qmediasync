@@ -32,7 +32,7 @@ func (s SourceType) String() string {
 	case SourceType123:
 		return "123"
 	case SourceTypeOpenList:
-		return "开放列表"
+		return "OpenList"
 	case SourceTypeBaiduPan:
 		return "百度网盘"
 	case SourceTypeEmbyMedia:
