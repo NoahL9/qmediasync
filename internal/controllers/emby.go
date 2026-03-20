@@ -671,10 +671,16 @@ func handlePlaybackEvent(body []byte, event EmbyEvent) {
 
 	// 构造并发送通知
 	notif := createPlaybackNotification(&playbackWebhook)
+	imagePath := notif.Image // 保存图片路径以便后续清理
 	if notificationmanager.GlobalEnhancedNotificationManager != nil {
 		if err := notificationmanager.GlobalEnhancedNotificationManager.SendNotification(context.Background(), notif); err != nil {
 			helpers.AppLogger.Errorf("发送播放通知失败: %v", err)
 		}
+	}
+
+	// 删除临时图片文件
+	if imagePath != "" {
+		os.Remove(imagePath)
 	}
 }
 
@@ -683,6 +689,25 @@ func createPlaybackNotification(webhook *models.EmbyPlaybackWebhook) *notificati
 	// 构造通知内容
 	title := fmt.Sprintf("%s %s", webhook.GetEventTypeEmoji(), webhook.GetEventTypeName())
 	content := formatPlaybackNotificationContent(webhook)
+
+	// 下载海报图片（如果有）
+	imagePath := ""
+	if webhook.Item.ImageTags != nil {
+		if tag, ok := webhook.Item.ImageTags["Primary"]; ok {
+			imageUrl := fmt.Sprintf("%s/emby/Items/%s/Images/Primary?tag=%s&api_key=%s",
+				models.GlobalEmbyConfig.EmbyUrl,
+				webhook.Item.ID,
+				tag,
+				models.GlobalEmbyConfig.EmbyApiKey)
+			posterPath := filepath.Join(os.TempDir(), fmt.Sprintf("%s_playback.jpg", webhook.Item.ID))
+			derr := helpers.DownloadFile(imageUrl, posterPath, "QMediaSync")
+			if derr != nil {
+				helpers.AppLogger.Errorf("下载Emby海报失败: %v", derr)
+			} else {
+				imagePath = posterPath
+			}
+		}
+	}
 
 	// 构造通知元数据
 	metadata := map[string]interface{}{
@@ -706,7 +731,7 @@ func createPlaybackNotification(webhook *models.EmbyPlaybackWebhook) *notificati
 		metadata["playback_duration_formatted"] = models.FormatPlaybackDuration(playbackDuration)
 	}
 
-	return &notification.Notification{
+	notif := &notification.Notification{
 		Type:      notification.NotificationType(webhook.GetNotificationEventType()),
 		Title:     title,
 		Content:   content,
@@ -714,58 +739,22 @@ func createPlaybackNotification(webhook *models.EmbyPlaybackWebhook) *notificati
 		Timestamp: time.Now(),
 		Priority:  notification.NormalPriority,
 	}
+
+	// 如果有图片，添加到通知
+	if imagePath != "" {
+		notif.Image = imagePath
+	}
+
+	return notif
 }
 
 // formatPlaybackNotificationContent 格式化播放通知内容
 func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) string {
 	var buf bytes.Buffer
 
-	// 媒体标题（包含年份信息）
-	mediaTitle := webhook.Item.Name
-	if webhook.Item.ProductionYear > 0 {
-		mediaTitle = fmt.Sprintf("%s (%d)", webhook.Item.Name, webhook.Item.ProductionYear)
-	}
-
 	buf.WriteString(fmt.Sprintf("用户：%s\n", webhook.GetUserName()))
-	buf.WriteString(fmt.Sprintf("内容：%s - %s\n", webhook.GetMediaTypeName(), mediaTitle))
-
-	// 如果是剧集，添加季集信息
-	if webhook.Item.Type == "Episode" {
-		seasonEpisode := webhook.Item.GetSeasonEpisodeString()
-		if seasonEpisode != "" {
-			buf.WriteString(fmt.Sprintf("%s\n", seasonEpisode))
-		}
-	}
-
-	// 添加原始标题（如果与当前标题不同）
-	if webhook.Item.OriginalTitle != "" && webhook.Item.OriginalTitle != webhook.Item.Name {
-		buf.WriteString(fmt.Sprintf("原始标题：%s\n", webhook.Item.OriginalTitle))
-	}
-
-	// 添加首播日期（如果有）
-	if webhook.Item.PremiereDate != "" {
-		if parsedTime, err := time.Parse(time.RFC3339, webhook.Item.PremiereDate); err == nil {
-			buf.WriteString(fmt.Sprintf("首播日期：%s\n", parsedTime.Format("2006-01-02")))
-		}
-	}
-
-	// 添加设备信息
 	buf.WriteString(fmt.Sprintf("设备：%s (%s)\n", webhook.GetDeviceName(), webhook.GetClientName()))
-
-	// 如果是停止事件，添加播放时长和进度
-	if webhook.Event == "playback.stop" {
-		playbackDuration := webhook.GetPlaybackDuration()
-		if playbackDuration > 0 {
-			durationStr := models.FormatPlaybackDuration(playbackDuration)
-			buf.WriteString(fmt.Sprintf("时长：%s", durationStr))
-
-			// 计算播放进度百分比
-			if webhook.Session.PlaybackInfo.MediaSource.RunTimeTicks > 0 {
-				progress := float64(webhook.Session.PlaybackInfo.PositionTicks) / float64(webhook.Session.PlaybackInfo.MediaSource.RunTimeTicks) * 100
-				buf.WriteString(fmt.Sprintf("（%.1f%%）", progress))
-			}
-		}
-	}
+	buf.WriteString(webhook.Item.Name)
 
 	return buf.String()
 }

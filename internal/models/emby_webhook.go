@@ -40,14 +40,16 @@ type EmbyMediaSource struct {
 
 // EmbyPlaybackItem Emby 播放媒体项信息
 type EmbyPlaybackItem struct {
-	Name           string `json:"Name"`
-	Type           string `json:"Type"` // Movie/Episode
-	OriginalTitle  string `json:"OriginalTitle,omitempty"`
-	ProductionYear int    `json:"ProductionYear,omitempty"`
-	PremiereDate   string `json:"PremiereDate,omitempty"`
-	SeriesName     string `json:"SeriesName,omitempty"`     // 剧集名称
-	SeasonNumber   int    `json:"SeasonNumber,omitempty"`   // 季号（剧集）
-	EpisodeNumber  int    `json:"EpisodeNumber,omitempty"`  // 集号（剧集）
+	Name           string             `json:"Name"`
+	Type           string             `json:"Type"` // Movie/Episode
+	OriginalTitle  string             `json:"OriginalTitle,omitempty"`
+	ProductionYear int                `json:"ProductionYear,omitempty"`
+	PremiereDate   string             `json:"PremiereDate,omitempty"`
+	SeriesName     string             `json:"SeriesName,omitempty"`     // 剧集名称
+	SeasonNumber   int                `json:"SeasonNumber,omitempty"`   // 季号（剧集）
+	EpisodeNumber  int                `json:"EpisodeNumber,omitempty"`  // 集号（剧集）
+	ImageTags      map[string]string  `json:"ImageTags,omitempty"`      // 图片标签
+	ID             string             `json:"Id"`                      // 媒体ID
 }
 
 // GetUserID 获取用户ID
