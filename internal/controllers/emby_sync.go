@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"Q115-STRM/internal/emby"
+	embyclientrestgo "Q115-STRM/internal/embyclient-rest-go"
 	"Q115-STRM/internal/helpers"
 	"Q115-STRM/internal/models"
 	"net/http"
@@ -78,6 +79,32 @@ func GetEmbySyncStatus(c *gin.Context) {
 // @Security JwtAuth
 // @Security ApiKeyAuth
 func GetEmbyLibraries(c *gin.Context) {
+	config, err := models.GetEmbyConfig()
+	if err == gorm.ErrRecordNotFound {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "尚未配置Emby"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "获取Emby配置失败: " + err.Error()})
+		return
+	}
+	if config.EmbyUrl == "" || config.EmbyApiKey == "" {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "Emby Url或ApiKey为空"})
+		return
+	}
+
+	// 直接从 Emby 查询媒体库，并写入本地 emby_libraries 表
+	client := embyclientrestgo.NewClient(config.EmbyUrl, config.EmbyApiKey)
+	libs, err := client.GetAllMediaLibraries()
+	if err != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "查询Emby媒体库失败: " + err.Error()})
+		return
+	}
+	if err := models.UpsertEmbyLibraries(libs); err != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "写入媒体库表失败: " + err.Error()})
+		return
+	}
+
 	libraries, err := models.GetAllEmbyLibraries()
 	if err != nil {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "获取媒体库列表失败: " + err.Error()})
