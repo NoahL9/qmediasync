@@ -3,6 +3,7 @@ package models
 import (
 	"Q115-STRM/internal/db"
 	"Q115-STRM/internal/helpers"
+	"errors"
 	"maps"
 	"os"
 	"path/filepath"
@@ -194,7 +195,7 @@ func (sp *SyncPath) GetStrmBaseUrl() string {
 }
 
 // 修改同步路径
-func (sp *SyncPath) Update(sourceType SourceType, accountId uint, baseCid, localPath, remotePath string, enableCron bool, customConfig bool, syncPathSetting SettingStrm) bool {
+func (sp *SyncPath) Update(sourceType SourceType, accountId uint, baseCid, localPath, remotePath string, enableCron bool, customConfig bool, syncPathSetting SettingStrm) error {
 	if runtime.GOOS != "windows" {
 		localPath = strings.TrimRight(localPath, "/")
 		remotePath = strings.Trim(remotePath, "/")
@@ -206,7 +207,7 @@ func (sp *SyncPath) Update(sourceType SourceType, accountId uint, baseCid, local
 		strmSetting := syncPathSetting.EncodeArr()
 		if strmSetting == nil {
 			helpers.AppLogger.Errorf("将同步路径设置编码为JSON字符串失败")
-			return false
+			return errors.New("将同步路径设置编码为JSON字符串失败")
 		}
 		sp.SettingStrm = *strmSetting
 	} else {
@@ -236,7 +237,7 @@ func (sp *SyncPath) Update(sourceType SourceType, accountId uint, baseCid, local
 	os.MkdirAll(fullPath, 0777)
 	// 更新同步路径
 	// helpers.AppLogger.Debugf("更新同步路径: %s", fullPath)
-	return result.Error == nil
+	return result.Error
 }
 
 func (sp *SyncPath) SetIsFullSync(isFullSync bool) {

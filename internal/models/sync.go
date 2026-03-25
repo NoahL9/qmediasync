@@ -29,15 +29,6 @@ var SyncStatusText map[SyncStatus]string = map[SyncStatus]string{
 	SyncStatusFailed:     "失败",
 }
 
-type SyncResultStatus int // 同步结果的状态，标记文件要做的操作
-
-const (
-	SyncResultStatusNew    SyncResultStatus = iota // 新增
-	SyncResultStatusUpdate                         // 更新
-	SyncResultStatusDelete                         // 删除
-	SyncResultStatusSame                           // 相同
-)
-
 type SyncSubStatus int
 
 const (

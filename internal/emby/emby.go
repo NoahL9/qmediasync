@@ -92,10 +92,10 @@ func PerformEmbySync() (int, error) {
 			}
 			libs = filteredLibs
 
-			// 清理未选中的媒体库数据
-			if err := models.CleanupUnselectedEmbyLibraryData(selectedLibIds); err != nil {
-				helpers.AppLogger.Warnf("清理未选中媒体库数据失败: %v", err)
-			}
+			// // 清理未选中的媒体库数据
+			// if err := models.CleanupUnselectedEmbyLibraryData(selectedLibIds); err != nil {
+			// 	helpers.AppLogger.Warnf("清理未选中媒体库数据失败: %v", err)
+			// }
 		} else {
 			helpers.AppLogger.Warnf("解析选中的媒体库列表失败: %v", err)
 		}

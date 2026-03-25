@@ -310,9 +310,9 @@ func UpdateSyncPath(c *gin.Context) {
 		req.BaseCid = strings.ReplaceAll(req.BaseCid, "\\", "/")
 	}
 	// helpers.AppLogger.Infof("更新同步路径 %d 定时任务: %s", syncPath.ID, req.Cron)
-	success := syncPath.Update(req.SourceType, req.AccountId, req.BaseCid, req.LocalPath, remotePath, req.EnableCron, req.CustomConfig, req.SettingStrm)
-	if !success {
-		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "更新同步路径失败", Data: nil})
+	updateErr := syncPath.Update(req.SourceType, req.AccountId, req.BaseCid, req.LocalPath, remotePath, req.EnableCron, req.CustomConfig, req.SettingStrm)
+	if updateErr != nil {
+		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "更新同步路径失败: " + updateErr.Error(), Data: nil})
 		return
 	}
 	if oldCron != syncPath.Cron {
