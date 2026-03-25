@@ -64,6 +64,9 @@ func GetAccountList(c *gin.Context) {
 		case "MQ的媒体库":
 			a.AppId = ""
 			a.AppIdName = "MQ的媒体库"
+		case "QMediaSync":
+			a.AppId = ""
+			a.AppIdName = "QMediaSync"
 		default:
 			a.AppIdName = "自定义"
 			a.AppId = account.AppId
@@ -118,17 +121,8 @@ func CreateTmpAccount(c *gin.Context) {
 	}
 
 	if models.SourceType115 == tmpAccount.SourceType {
-		if tmpAccount.AppIdName == "自定义" {
-			if tmpAccount.AppId == "" {
-				c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "115开放平台应用ID不能为空", Data: nil})
-				return
-			} else {
-				appId = tmpAccount.AppId
-			}
-		} else {
-			// 检查appIDName是否有效
-			appId = tmpAccount.AppIdName
-		}
+		// 检查appIDName是否有效
+		appId = tmpAccount.AppIdName
 	}
 	account, err := models.CreateAccountByName(tmpAccount.Name, tmpAccount.SourceType, appId)
 	if err != nil {

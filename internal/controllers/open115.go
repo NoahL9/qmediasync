@@ -361,7 +361,7 @@ func GetOAuthUrl(c *gin.Context) {
 		return
 	}
 	clientId := account.AppId
-	if clientId != "Q115-STRM" && clientId != "MQ的媒体库" {
+	if clientId != "Q115-STRM" && clientId != "MQ的媒体库" || clientId != "QMediaSync" {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "自定义的APPID无法授权", Data: nil})
 		return
 	}
@@ -379,6 +379,9 @@ func GetOAuthUrl(c *gin.Context) {
 		ClientId:    clientId,
 		RedirectUrl: fmt.Sprintf("%s?source=115", redirectUrl),
 		AccountId:   account.ID,
+	}
+	if clientId == "QMediaSync" {
+		baseUrl = helpers.GlobalConfig.NewAuthServer
 	}
 	// helpers.AppLogger.Infof("生成OAuth登录地址: %+v", stateObj)
 	stateJson, _ := json.Marshal(stateObj)
