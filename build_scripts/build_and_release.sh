@@ -24,17 +24,20 @@ command_exists() {
 
 # Function to show usage
 show_usage() {
-    echo "Usage: $0 [-v VERSION]"
+    echo "Usage: $0 [-v VERSION] [-g]"
     echo "Options:"
     echo "  -v VERSION    Specify version (e.g., v1.0.0)"
+    echo "  -g           Gitee-only mode: build and release to Gitee only (skip Docker, GitHub, notifications)"
     echo "  -h           Show this help message"
 }
 
 # Parse command line arguments
 VERSION=""
-while getopts "v:h" opt; do
+GITEE_ONLY=0
+while getopts "v:gh" opt; do
     case $opt in
         v) VERSION="$OPTARG" ;;
+        g) GITEE_ONLY=1 ;;
         h) show_usage; exit 0 ;;
         *) show_usage; exit 1 ;;
     esac
@@ -376,6 +379,7 @@ print_colored "green" "FPK build process completed!"
 print_colored "green" "========================================"
 
 # Docker镜像打包
+if [ "$GITEE_ONLY" -eq 0 ]; then
 print_colored "cyan" "Starting Docker image build..."
 
 # Check if Docker is available
@@ -416,7 +420,11 @@ else
     # rm -rf "temp_build"
     print_colored "green" "✓ Temporary files cleaned up"
 fi
+else
+    print_colored "yellow" "Gitee-only mode: skipping Docker build"
+fi
 
+if [ "$GITEE_ONLY" -eq 0 ]; then
 echo
 print_colored "green" "Creating GitHub Release..."
 
@@ -517,6 +525,104 @@ if gh release create "$TAG" \
     fi
 else
     print_colored "red" "Error: Failed to create GitHub Release"
+fi
+else
+    print_colored "yellow" "Gitee-only mode: skipping GitHub Release and notifications"
+fi
+
+# Gitee Release
+echo
+print_colored "green" "Creating Gitee Release..."
+
+GITEE_ACCESS_TOKEN="${GITEE_ACCESS_TOKEN:-}"
+GITEE_REPO="qicfan/qmediasync"
+GITEE_API_BASE="https://gitee.com/api/v5"
+
+if [ -z "$GITEE_ACCESS_TOKEN" ]; then
+    print_colored "yellow" "Warning: GITEE_ACCESS_TOKEN not set, skipping Gitee Release"
+else
+    print_colored "cyan" "Checking existing Gitee releases..."
+
+    EXISTING_RELEASES=$(curl -s -X GET \
+        "${GITEE_API_BASE}/repos/${GITEE_REPO}/releases?access_token=${GITEE_ACCESS_TOKEN}&page=1&per_page=100")
+
+    RELEASE_COUNT=$(echo "$EXISTING_RELEASES" | grep -c '"id"' || true)
+    print_colored "cyan" "Found $RELEASE_COUNT existing Gitee releases"
+
+    MAX_RELEASES=10
+    if [ "$RELEASE_COUNT" -ge "$MAX_RELEASES" ]; then
+        print_colored "yellow" "Too many releases ($RELEASE_COUNT), cleaning up old releases (keeping latest $MAX_RELEASES)..."
+
+        RELEASE_IDS=$(echo "$EXISTING_RELEASES" | grep '"id"' | head -n "$RELEASE_COUNT" | sed 's/.*"id": *\([0-9]*\).*/\1/' | tac)
+
+        DELETE_COUNT=$((RELEASE_COUNT - MAX_RELEASES + 1))
+        DELETED=0
+        for RID in $RELEASE_IDS; do
+            if [ "$DELETED" -ge "$DELETE_COUNT" ]; then
+                break
+            fi
+            DEL_RESPONSE=$(curl -s -X DELETE \
+                "${GITEE_API_BASE}/repos/${GITEE_REPO}/releases/${RID}?access_token=${GITEE_ACCESS_TOKEN}")
+            if echo "$DEL_RESPONSE" | grep -q '"id"'; then
+                DELETED=$((DELETED + 1))
+                print_colored "yellow" "  Deleted old release (id: $RID)"
+            else
+                print_colored "yellow" "  Failed to delete release (id: $RID)"
+            fi
+        done
+        print_colored "green" "✓ Cleaned up $DELETED old releases"
+    fi
+
+    print_colored "cyan" "Creating Gitee release $TAG..."
+
+    GITEE_RELEASE_RESPONSE=$(curl -s -X POST \
+        "${GITEE_API_BASE}/repos/${GITEE_REPO}/releases" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"access_token\": \"${GITEE_ACCESS_TOKEN}\",
+            \"tag_name\": \"${TAG}\",
+            \"name\": \"Release ${TAG}\",
+            \"body\": $(echo "$RELEASE_BODY" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || echo "\"Release ${TAG}\""),
+            \"target_commitish\": \"master\",
+            \"prerelease\": false
+        }")
+
+    GITEE_RELEASE_ID=$(echo "$GITEE_RELEASE_RESPONSE" | grep -o '"id":[0-9]*' | head -1 | sed 's/"id"://')
+
+    if [ -n "$GITEE_RELEASE_ID" ]; then
+        print_colored "green" "✓ Gitee Release created successfully (id: $GITEE_RELEASE_ID)"
+
+        print_colored "cyan" "Uploading attachments to Gitee Release..."
+
+        UPLOAD_SUCCESS=0
+        UPLOAD_FAIL=0
+        for FILE in QMediaSync_*.zip QMediaSync_*.tar.gz QMediaSync_*.fpk; do
+            if [ -f "$FILE" ]; then
+                FILE_SIZE=$(stat -c%s "$FILE" 2>/dev/null || stat -f%z "$FILE" 2>/dev/null || echo "0")
+                print_colored "cyan" "  Uploading $FILE (${FILE_SIZE} bytes)..."
+
+                UPLOAD_RESPONSE=$(curl -s -X POST \
+                    "${GITEE_API_BASE}/repos/${GITEE_REPO}/releases/${GITEE_RELEASE_ID}/attach_files" \
+                    -F "access_token=${GITEE_ACCESS_TOKEN}" \
+                    -F "file=@${FILE}")
+
+                if echo "$UPLOAD_RESPONSE" | grep -q '"id"'; then
+                    print_colored "green" "  ✓ Uploaded $FILE"
+                    UPLOAD_SUCCESS=$((UPLOAD_SUCCESS + 1))
+                else
+                    print_colored "yellow" "  ✗ Failed to upload $FILE"
+                    print_colored "yellow" "  Response: $UPLOAD_RESPONSE"
+                    UPLOAD_FAIL=$((UPLOAD_FAIL + 1))
+                fi
+            fi
+        done
+
+        echo
+        print_colored "green" "✓ Gitee Release upload completed: $UPLOAD_SUCCESS succeeded, $UPLOAD_FAIL failed"
+    else
+        print_colored "red" "Error: Failed to create Gitee Release"
+        print_colored "yellow" "Response: $GITEE_RELEASE_RESPONSE"
+    fi
 fi
 
 # Cleanup temp files
