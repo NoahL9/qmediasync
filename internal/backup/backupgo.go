@@ -232,15 +232,14 @@ func backupToJsonFile(backupDir string, modelName string, totalTable int, count 
 				helpers.AppLogger.Errorf("写入%s备份文件失败: %v", modelName, err)
 			}
 			totalCount++
-			// 大表（>10000条）每5000条打印一次进度
-			if totalCount > 10000 && totalCount%5000 == 0 {
-				helpers.AppLogger.Infof("备份%s进度: %d条", modelName, totalCount)
+			if totalCount%10 == 0 {
+				SetRunningResult("backup", fmt.Sprintf("已备份%s %d条", modelName, totalCount), totalTable, *count, "", false)
 			}
 		}
 		page++
 	}
 	*count++
-	SetRunningResult("backup", fmt.Sprintf("表[%s]备份完成，共%d条", modelName, totalCount), totalTable, *count, "", false)
+	SetRunningResult("backup", fmt.Sprintf("已备份%s %d条", modelName, totalCount), totalTable, *count, "", false)
 	helpers.AppLogger.Infof("表[%s]备份完成，共%d条数据", modelName, totalCount)
 	return nil
 }
