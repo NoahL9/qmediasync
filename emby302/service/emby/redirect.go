@@ -218,7 +218,6 @@ func ProxyOriginalResource(c *gin.Context) {
 	// matchedWin, _ := regexp.MatchString(pattern, embyPath)
 	// if strings.HasPrefix(embyPath, "/") || matchedWin || !strings.Contains(embyPath, "/proxy-115") {
 	ProxyOrigin(c)
-	return
 	// }
 	// Redirect2OpenlistLink(c)
 }
@@ -259,6 +258,7 @@ func getFinalRedirectLink(originLink string, header http.Header) string {
 		logs.Warn("内部重定向失败: %v", err)
 		return originLink
 	}
+	logs.Success("内部重定向查询到最终链接: %s => %s", originLink, finalLink)
 	defer resp.Body.Close()
 	return finalLink
 }
