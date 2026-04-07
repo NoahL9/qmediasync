@@ -7,10 +7,11 @@ import (
 
 // EmbyPlaybackWebhook Emby 播放事件 Webhook 消息结构
 type EmbyPlaybackWebhook struct {
-	Event   string              `json:"Event"` // playback.start/playback.pause/playback.stop
-	User    EmbyPlaybackUser    `json:"User"`
-	Item    EmbyPlaybackItem    `json:"Item"`
-	Session EmbyPlaybackSession `json:"Session"`
+	Event        string              `json:"Event"` // playback.start/playback.pause/playback.stop
+	User         EmbyPlaybackUser    `json:"User"`
+	Item         EmbyPlaybackItem    `json:"Item"`
+	Session      EmbyPlaybackSession `json:"Session"`
+	PlaybackInfo EmbyPlaybackInfo    `json:"PlaybackInfo"`
 }
 
 // EmbyPlaybackUser 播放用户信息
@@ -21,9 +22,8 @@ type EmbyPlaybackUser struct {
 
 // EmbyPlaybackSession 播放会话信息
 type EmbyPlaybackSession struct {
-	DeviceName   string           `json:"DeviceName"`
-	Client       string           `json:"Client"`
-	PlaybackInfo EmbyPlaybackInfo `json:"PlaybackInfo"`
+	DeviceName string `json:"DeviceName"`
+	Client     string `json:"Client"`
 }
 
 // EmbyPlaybackInfo 播放信息
@@ -78,7 +78,7 @@ func (w *EmbyPlaybackWebhook) GetPlaybackDuration() int64 {
 		return 0
 	}
 	// 将PositionTicks转换为毫秒（1 Tick = 100纳秒）
-	return w.Session.PlaybackInfo.PositionTicks / 10000
+	return w.PlaybackInfo.PositionTicks / 10000
 }
 
 // GetSeasonEpisodeString 获取季集信息字符串（如 "S01E06"）

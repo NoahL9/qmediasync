@@ -747,8 +747,8 @@ func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) stri
 
 	// 播放进度
 	if models.GlobalEmbyConfig != nil && models.GlobalEmbyConfig.EnablePlaybackProgress == 1 {
-		positionTicks := webhook.Session.PlaybackInfo.PositionTicks
-		runtimeTicks := webhook.Session.PlaybackInfo.MediaSource.RunTimeTicks
+		positionTicks := webhook.PlaybackInfo.PositionTicks
+		runtimeTicks := webhook.PlaybackInfo.MediaSource.RunTimeTicks
 		if positionTicks > 0 && runtimeTicks > 0 {
 			positionStr := formatTicksToTime(positionTicks)
 			runtimeStr := formatTicksToTime(runtimeTicks)
