@@ -345,22 +345,11 @@ func (m *movieScrapeImpl) SyncFilesToSTRMPath(mediaFile *models.ScrapeMediaFile,
 		IsMeta:        false,
 		LocalFilePath: filepath.Join(syncPath.LocalPath, mediaFile.Media.Path, mediaFile.NewVideoBaseName+".strm"),
 	})
-	models.DeleteSyncRecordById(syncStrm.Sync.ID)
-	// 发送STRM生成完成通知（复用现有SyncFinished通知开关）
-	if strmErr == nil && mediaFile.Media != nil && notificationmanager.GlobalEnhancedNotificationManager != nil {
-		ctx := context.Background()
-		notif := &models.Notification{
-			Type:      models.SyncFinished,
-			Title:     fmt.Sprintf("✅ 刮削同步生成STRM完成: %s", mediaFile.Name),
-			Content:   fmt.Sprintf("📊 类型: 电影, 路径: %s\n⏰ 时间: %s", syncPath.RemotePath, time.Now().Format("2006-01-02 15:04:05")),
-			Image:     mediaFile.Media.PosterPath,
-			Timestamp: time.Now(),
-			Priority:  models.NormalPriority,
-		}
-		if err := notificationmanager.GlobalEnhancedNotificationManager.SendNotification(ctx, notif); err != nil {
-			helpers.AppLogger.Errorf("发送STRM生成完成通知失败: %v", err)
-		}
+	if strmErr != nil {
+		helpers.AppLogger.Errorf("生成STRM文件失败, 失败原因: %v", strmErr)
+		return
 	}
+	models.DeleteSyncRecordById(syncStrm.Sync.ID)
 	if files == nil {
 		return
 	}
