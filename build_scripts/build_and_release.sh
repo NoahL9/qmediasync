@@ -592,11 +592,11 @@ else
         | grep -c "\"name\":\"${TAG}\""
     )
 
-    if [ "$TAG_EXISTS" -eq 0 ]; then
-        print_colored "cyan" "Tag $TAG not found on Gitee, will create during release"
-    else
-        print_colored "yellow" "Tag $TAG already exists on Gitee, deleting old tag..."
-    fi
+    # if [ "$TAG_EXISTS" -eq 0 ]; then
+    #     print_colored "cyan" "Tag $TAG not found on Gitee, will create during release"
+    # else
+    #     print_colored "yellow" "Tag $TAG already exists on Gitee, deleting old tag..."
+    # fi
 
     GITEE_RELEASE_RESPONSE=$(curl -s -X POST \
         "${GITEE_API_BASE}/repos/${GITEE_REPO}/releases" \
